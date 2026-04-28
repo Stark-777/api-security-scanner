@@ -1,9 +1,10 @@
 import type { Finding } from "../core/finding.js";
 import type { Severity } from "../core/severity.js";
-import type { Endpoint } from "../core/types.js";
+import type { Endpoint, ProbeResult } from "../core/types.js";
 
 export interface RuleContext {
   endpoint: Endpoint;
+  response: ProbeResult["response"];
 }
 
 export interface Rule {

@@ -20,6 +20,10 @@ export {
   loadConfig,
   resolveEnvVariables
 } from "./parsers/config.parser.js";
+export { CorsRule } from "./rules/cors.rule.js";
+export { HttpsEnforcedRule } from "./rules/https-enforced.rule.js";
+export { MissingAuthRule } from "./rules/missing-auth.rule.js";
+export { SecurityHeadersRule } from "./rules/security-headers.rule.js";
 export type { Rule, RuleContext } from "./rules/rule.js";
 export {
   REDACTED_VALUE,
