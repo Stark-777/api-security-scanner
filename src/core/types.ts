@@ -21,3 +21,12 @@ export interface ScannerConfig {
   timeoutMs?: number;
   endpoints: Endpoint[];
 }
+
+export interface ProbeResult {
+  endpoint: Endpoint;
+  response: {
+    status: number;
+    headers: Record<string, string>;
+    data: unknown;
+  };
+}

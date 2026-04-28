@@ -1,7 +1,13 @@
 export { createCli } from "./cli/index.js";
 export { Severity } from "./core/severity.js";
 export type { Finding } from "./core/finding.js";
-export type { Endpoint, HttpMethod, ScannerConfig } from "./core/types.js";
+export { Scanner, createScanner, type ScannerOptions } from "./core/scanner.js";
+export type {
+  Endpoint,
+  HttpMethod,
+  ProbeResult,
+  ScannerConfig
+} from "./core/types.js";
 export {
   HttpClient,
   createHttpClient,
