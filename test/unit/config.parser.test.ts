@@ -9,6 +9,7 @@ import {
   loadConfig,
   resolveEnvVariables
 } from "../../src/parsers/config.parser.js";
+import type { ConfigLoaderError } from "../../src/parsers/config.parser.js";
 
 describe("config parser", () => {
   it("resolves environment variables in nested config values", () => {
@@ -117,5 +118,39 @@ describe("config parser", () => {
         }
       ]
     });
+  });
+
+  it("adds file context to invalid JSON errors", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scanner-config-"));
+    const configPath = join(tempDirectory, "broken.json");
+
+    await writeFile(configPath, "{invalid-json");
+
+    await expect(loadConfig(configPath)).rejects.toMatchObject<ConfigLoaderError>(
+      {
+        name: "ConfigLoaderError",
+        filePath: configPath,
+        message: `Invalid JSON in config file: ${configPath}`
+      }
+    );
+  });
+
+  it("adds file context to validation errors", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scanner-config-"));
+    const configPath = join(tempDirectory, "invalid.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        endpoints: []
+      })
+    );
+
+    await expect(loadConfig(configPath)).rejects.toMatchObject<ConfigLoaderError>(
+      {
+        name: "ConfigLoaderError",
+        filePath: configPath
+      }
+    );
   });
 });

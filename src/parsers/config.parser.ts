@@ -29,6 +29,16 @@ export const configSchema = z.object({
   endpoints: z.array(endpointSchema).min(1)
 });
 
+export class ConfigLoaderError extends Error {
+  readonly filePath: string;
+
+  constructor(message: string, filePath: string, cause?: unknown) {
+    super(message, { cause });
+    this.name = "ConfigLoaderError";
+    this.filePath = filePath;
+  }
+}
+
 const envVariablePattern = /\$\{([A-Z0-9_]+)\}/g;
 
 const resolveString = (
@@ -74,9 +84,57 @@ export const loadConfig = async (
   filePath: string,
   env: NodeJS.ProcessEnv = process.env
 ): Promise<ScannerConfig> => {
-  const rawConfig = await readFile(filePath, "utf8");
-  const parsedJson: unknown = JSON.parse(rawConfig);
-  const resolvedConfig = resolveEnvVariables(parsedJson, env);
+  let rawConfig: string;
 
-  return configSchema.parse(resolvedConfig);
+  try {
+    rawConfig = await readFile(filePath, "utf8");
+  } catch (error) {
+    throw new ConfigLoaderError(
+      `Failed to read config file: ${filePath}`,
+      filePath,
+      error
+    );
+  }
+
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(rawConfig);
+  } catch (error) {
+    throw new ConfigLoaderError(
+      `Invalid JSON in config file: ${filePath}`,
+      filePath,
+      error
+    );
+  }
+
+  let resolvedConfig: unknown;
+
+  try {
+    resolvedConfig = resolveEnvVariables(parsedJson, env);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to resolve environment variables";
+    throw new ConfigLoaderError(
+      `Config environment resolution failed for ${filePath}: ${message}`,
+      filePath,
+      error
+    );
+  }
+
+  try {
+    return configSchema.parse(resolvedConfig);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ConfigLoaderError(
+        `Config validation failed for ${filePath}: ${error.issues
+          .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
+          .join("; ")}`,
+        filePath,
+        error
+      );
+    }
+
+    throw error;
+  }
 };

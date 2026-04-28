@@ -42,8 +42,9 @@ describe("logger helpers", () => {
 
   it("logs redacted metadata", () => {
     const info = vi.fn();
+    const warn = vi.fn();
     const error = vi.fn();
-    const logger = createLogger({ info, error });
+    const logger = createLogger({ info, warn, error });
 
     logger.info("request", {
       authorization: "Bearer secret-token",
@@ -53,6 +54,23 @@ describe("logger helpers", () => {
     expect(info).toHaveBeenCalledWith("request", {
       authorization: REDACTED_VALUE,
       traceId: "123"
+    });
+  });
+
+  it("supports warn logging with redaction", () => {
+    const info = vi.fn();
+    const warn = vi.fn();
+    const error = vi.fn();
+    const logger = createLogger({ info, warn, error });
+
+    logger.warn("warning", {
+      apiKey: "super-secret",
+      operation: "scan"
+    });
+
+    expect(warn).toHaveBeenCalledWith("warning", {
+      apiKey: REDACTED_VALUE,
+      operation: "scan"
     });
   });
 });

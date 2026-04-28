@@ -1,8 +1,17 @@
-import type { AxiosInstance } from "axios";
+import { AxiosError, type AxiosInstance } from "axios";
 import { describe, expect, it, vi } from "vitest";
 
 import { HttpClient } from "../../src/http/client.js";
+import type { HttpClientError } from "../../src/http/client.js";
 import { REDACTED_VALUE, type Logger } from "../../src/utils/logger.js";
+
+const createLogger = (): Logger => {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  };
+};
 
 describe("http client", () => {
   it("merges default and request headers", async () => {
@@ -14,7 +23,7 @@ describe("http client", () => {
       data: { ok: true }
     });
     const axiosInstance = { request } as unknown as AxiosInstance;
-    const logger: Logger = { info: vi.fn(), error: vi.fn() };
+    const logger = createLogger();
     const client = new HttpClient({
       axiosInstance,
       logger,
@@ -78,7 +87,7 @@ describe("http client", () => {
       data: null
     });
     const info = vi.fn();
-    const logger: Logger = { info, error: vi.fn() };
+    const logger: Logger = { info, warn: vi.fn(), error: vi.fn() };
     const axiosInstance = { request } as unknown as AxiosInstance;
     const client = new HttpClient({ axiosInstance, logger });
 
@@ -109,6 +118,66 @@ describe("http client", () => {
       headers: {
         "set-cookie": REDACTED_VALUE
       }
+    });
+  });
+
+  it("wraps axios failures with request context", async () => {
+    const errorLogger = vi.fn();
+    const logger: Logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: errorLogger
+    };
+    const axiosError = new AxiosError(
+      "timeout exceeded",
+      "ECONNABORTED",
+      undefined,
+      undefined,
+      {
+        status: 504,
+        statusText: "Gateway Timeout",
+        headers: {
+          "set-cookie": "session=secret"
+        },
+        config: {
+          headers: {}
+        },
+        data: null
+      }
+    );
+    const request = vi.fn().mockRejectedValue(axiosError);
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const client = new HttpClient({ axiosInstance, logger });
+
+    await expect(
+      client.request({
+        url: "https://api.example.com/users",
+        method: "GET",
+        headers: {
+          Authorization: "Bearer secret-token"
+        }
+      })
+    ).rejects.toMatchObject<HttpClientError>({
+      name: "HttpClientError",
+      method: "GET",
+      url: "https://api.example.com/users",
+      status: 504,
+      code: "ECONNABORTED"
+    });
+
+    expect(errorLogger).toHaveBeenCalledWith("HTTP request failed", {
+      url: "https://api.example.com/users",
+      method: "GET",
+      timeoutMs: 5000,
+      status: 504,
+      code: "ECONNABORTED",
+      headers: {
+        Authorization: REDACTED_VALUE
+      },
+      responseHeaders: {
+        "set-cookie": REDACTED_VALUE
+      },
+      message: "timeout exceeded"
     });
   });
 });

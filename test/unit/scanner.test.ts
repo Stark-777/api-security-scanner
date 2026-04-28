@@ -5,6 +5,14 @@ import { Scanner } from "../../src/core/scanner.js";
 import { HttpClient } from "../../src/http/client.js";
 import type { Logger } from "../../src/utils/logger.js";
 
+const createLogger = (): Logger => {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  };
+};
+
 describe("scanner", () => {
   it("accepts endpoints and sends requests for each one", async () => {
     const request = vi
@@ -22,9 +30,9 @@ describe("scanner", () => {
         data: null
       });
     const axiosInstance = { request } as unknown as AxiosInstance;
-    const logger: Logger = { info: vi.fn(), error: vi.fn() };
+    const logger = createLogger();
     const httpClient = new HttpClient({ axiosInstance, logger });
-    const scanner = new Scanner({ httpClient });
+    const scanner = new Scanner({ httpClient, logger });
 
     const results = await scanner.scanEndpoints([
       {
@@ -41,6 +49,13 @@ describe("scanner", () => {
     ]);
 
     expect(request).toHaveBeenCalledTimes(2);
+    expect(logger.info).toHaveBeenCalledWith("Scanner started", {
+      endpointsScanned: 2
+    });
+    expect(logger.info).toHaveBeenCalledWith("Scanner completed", {
+      endpointsScanned: 2,
+      responsesCollected: 2
+    });
     expect(results).toEqual([
       {
         endpoint: {
@@ -93,7 +108,7 @@ describe("scanner", () => {
     const scanner = new Scanner({
       httpClient: new HttpClient({
         axiosInstance,
-        logger: { info: vi.fn(), error: vi.fn() }
+        logger: createLogger()
       })
     });
 
@@ -115,5 +130,37 @@ describe("scanner", () => {
     ]);
 
     expect(results.map((result) => result.response.status)).toEqual([201, 202]);
+  });
+
+  it("logs endpoint failures before rethrowing", async () => {
+    const error = new Error("network unavailable");
+    const logger = createLogger();
+    const request = vi.fn().mockRejectedValue(error);
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const scanner = new Scanner({
+      logger,
+      httpClient: new HttpClient({
+        axiosInstance,
+        logger
+      })
+    });
+
+    await expect(
+      scanner.scanEndpoints([
+        {
+          url: "https://api.example.com/health",
+          method: "GET"
+        }
+      ])
+    ).rejects.toThrow("HTTP request failed for GET https://api.example.com/health");
+
+    expect(logger.error).toHaveBeenCalledWith("Endpoint scan failed", {
+      url: "https://api.example.com/health",
+      method: "GET",
+      error: expect.objectContaining({
+        name: "HttpClientError",
+        message: "HTTP request failed for GET https://api.example.com/health"
+      })
+    });
   });
 });

@@ -12,12 +12,14 @@ export type {
 } from "./core/types.js";
 export {
   HttpClient,
+  HttpClientError,
   createHttpClient,
   type HttpClientOptions,
   type HttpRequestOptions,
   type HttpResponse
 } from "./http/client.js";
 export {
+  ConfigLoaderError,
   configSchema,
   loadConfig,
   resolveEnvVariables

@@ -5,8 +5,17 @@ const SENSITIVE_KEY_PATTERN =
 
 export interface Logger {
   info(message: string, metadata?: unknown): void;
+  warn(message: string, metadata?: unknown): void;
   error(message: string, metadata?: unknown): void;
 }
+
+const redactMetadata = (metadata?: unknown): unknown => {
+  if (metadata === undefined) {
+    return undefined;
+  }
+
+  return redactSensitiveData(metadata);
+};
 
 export const redactSensitiveData = (value: unknown): unknown => {
   if (Array.isArray(value)) {
@@ -43,14 +52,17 @@ export const redactHeaders = (
 };
 
 export const createLogger = (
-  target: Pick<Console, "info" | "error"> = console
+  target: Pick<Console, "info" | "warn" | "error"> = console
 ): Logger => {
   return {
     info(message, metadata) {
-      target.info(message, redactSensitiveData(metadata));
+      target.info(message, redactMetadata(metadata));
+    },
+    warn(message, metadata) {
+      target.warn(message, redactMetadata(metadata));
     },
     error(message, metadata) {
-      target.error(message, redactSensitiveData(metadata));
+      target.error(message, redactMetadata(metadata));
     }
   };
 };

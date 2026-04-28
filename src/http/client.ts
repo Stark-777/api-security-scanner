@@ -1,4 +1,8 @@
-import axios, { type AxiosInstance, type AxiosResponseHeaders } from "axios";
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosResponseHeaders
+} from "axios";
 
 import type { HttpMethod } from "../core/types.js";
 import {
@@ -27,6 +31,29 @@ export interface HttpResponse {
   status: number;
   headers: Record<string, string>;
   data: unknown;
+}
+
+export class HttpClientError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+  readonly url: string;
+  readonly method: HttpMethod;
+
+  constructor(options: {
+    message: string;
+    url: string;
+    method: HttpMethod;
+    code?: string;
+    status?: number;
+    cause?: unknown;
+  }) {
+    super(options.message, { cause: options.cause });
+    this.name = "HttpClientError";
+    this.code = options.code;
+    this.status = options.status;
+    this.url = options.url;
+    this.method = options.method;
+  }
 }
 
 const normalizeHeaders = (
@@ -79,28 +106,83 @@ export class HttpClient {
       headers: redactHeaders(headers)
     });
 
-    const response = await this.axiosInstance.request({
+    try {
+      const response = await this.axiosInstance.request({
+        url: options.url,
+        method: options.method,
+        headers,
+        data: options.data,
+        timeout
+      });
+
+      const responseHeaders = normalizeHeaders(response.headers);
+
+      this.logger.info("HTTP response", {
+        url: options.url,
+        method: options.method,
+        status: response.status,
+        headers: redactHeaders(responseHeaders)
+      });
+
+      return {
+        status: response.status,
+        headers: responseHeaders,
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleRequestError(error, options, headers, timeout);
+    }
+  }
+
+  private handleRequestError(
+    error: unknown,
+    options: HttpRequestOptions,
+    headers: Record<string, string>,
+    timeout: number
+  ): HttpClientError {
+    if (error instanceof AxiosError) {
+      const status = error.response?.status;
+      const responseHeaders = normalizeHeaders(error.response?.headers);
+      const message =
+        status === undefined
+          ? `HTTP request failed for ${options.method} ${options.url}`
+          : `HTTP request failed for ${options.method} ${options.url} with status ${status}`;
+
+      this.logger.error("HTTP request failed", {
+        url: options.url,
+        method: options.method,
+        timeoutMs: timeout,
+        status,
+        code: error.code,
+        headers: redactHeaders(headers),
+        responseHeaders: redactHeaders(responseHeaders),
+        message: error.message
+      });
+
+      return new HttpClientError({
+        message,
+        url: options.url,
+        method: options.method,
+        code: error.code,
+        status,
+        cause: error
+      });
+    }
+
+    this.logger.error("HTTP request failed", {
       url: options.url,
       method: options.method,
-      headers,
-      data: options.data,
-      timeout
+      timeoutMs: timeout,
+      headers: redactHeaders(headers),
+      error
     });
 
-    const responseHeaders = normalizeHeaders(response.headers);
-
-    this.logger.info("HTTP response", {
+    return new HttpClientError({
+      message: `HTTP request failed for ${options.method} ${options.url}`,
       url: options.url,
       method: options.method,
-      status: response.status,
-      headers: redactHeaders(responseHeaders)
+      cause: error
     });
-
-    return {
-      status: response.status,
-      headers: responseHeaders,
-      data: response.data
-    };
   }
 }
 
