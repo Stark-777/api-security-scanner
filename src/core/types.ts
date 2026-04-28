@@ -1,3 +1,5 @@
+import type { Finding } from "./finding.js";
+
 export type HttpMethod =
   | "GET"
   | "POST"
@@ -29,4 +31,15 @@ export interface ProbeResult {
     headers: Record<string, string>;
     data: unknown;
   };
+}
+
+export interface ScanSummary {
+  endpointsScanned: number;
+  findingsBySeverity: Record<string, number>;
+  totalFindings: number;
+}
+
+export interface ScanReport {
+  summary: ScanSummary;
+  findings: Finding[];
 }

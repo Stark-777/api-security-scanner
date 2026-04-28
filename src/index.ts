@@ -6,6 +6,8 @@ export type {
   Endpoint,
   HttpMethod,
   ProbeResult,
+  ScanReport,
+  ScanSummary,
   ScannerConfig
 } from "./core/types.js";
 export {
@@ -20,6 +22,17 @@ export {
   loadConfig,
   resolveEnvVariables
 } from "./parsers/config.parser.js";
+export {
+  ConsoleReporter,
+  createConsoleReporter,
+  type ConsoleReporterTarget
+} from "./reporters/console.reporter.js";
+export { JsonReporter, createJsonReporter } from "./reporters/json.reporter.js";
+export {
+  createEmptySeverityCounts,
+  createScanReport,
+  createScanSummary
+} from "./reporters/helpers.js";
 export { CorsRule } from "./rules/cors.rule.js";
 export { HttpsEnforcedRule } from "./rules/https-enforced.rule.js";
 export { MissingAuthRule } from "./rules/missing-auth.rule.js";
