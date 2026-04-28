@@ -1,0 +1,23 @@
+{
+  "baseUrl": "${API_BASE_URL}",
+  "defaultHeaders": {
+    "Authorization": "Bearer ${API_TOKEN}",
+    "X-Client": "api-security-scanner"
+  },
+  "timeoutMs": 5000,
+  "endpoints": [
+    {
+      "url": "${API_BASE_URL}/health",
+      "method": "GET",
+      "description": "Health check endpoint"
+    },
+    {
+      "url": "${API_BASE_URL}/v1/users",
+      "method": "GET",
+      "headers": {
+        "X-Tenant-Id": "${TENANT_ID}"
+      },
+      "description": "List users"
+    }
+  ]
+}

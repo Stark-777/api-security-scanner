@@ -14,3 +14,10 @@ export interface Endpoint {
   body?: unknown;
   description?: string;
 }
+
+export interface ScannerConfig {
+  baseUrl?: string;
+  defaultHeaders?: Record<string, string>;
+  timeoutMs?: number;
+  endpoints: Endpoint[];
+}
