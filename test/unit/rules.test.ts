@@ -43,6 +43,12 @@ describe("HttpsEnforcedRule", () => {
     });
     expect(findings[0].timestamp).toEqual(expect.any(String));
   });
+
+  it("returns no findings for https endpoints", () => {
+    const rule = new HttpsEnforcedRule();
+
+    expect(rule.evaluate(createContext())).toEqual([]);
+  });
 });
 
 describe("MissingAuthRule", () => {
@@ -75,6 +81,21 @@ describe("MissingAuthRule", () => {
 
     expect(findings).toEqual([]);
   });
+
+  it("skips findings when the response indicates auth is enforced", () => {
+    const rule = new MissingAuthRule();
+    const findings = rule.evaluate(
+      createContext({
+        response: {
+          status: 401,
+          headers: {},
+          data: null
+        }
+      })
+    );
+
+    expect(findings).toEqual([]);
+  });
 });
 
 describe("CorsRule", () => {
@@ -97,6 +118,46 @@ describe("CorsRule", () => {
       ruleId: "cors-misconfiguration",
       severity: Severity.Medium
     });
+  });
+
+  it("returns a finding for credentialed cross-origin access", () => {
+    const rule = new CorsRule();
+    const findings = rule.evaluate(
+      createContext({
+        response: {
+          status: 200,
+          headers: {
+            "Access-Control-Allow-Origin": "https://app.example.com",
+            "Access-Control-Allow-Credentials": "true"
+          },
+          data: null
+        }
+      })
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      ruleId: "cors-misconfiguration",
+      title: "CORS allows credentials across origins",
+      severity: Severity.Medium
+    });
+  });
+
+  it("returns no findings for restrictive CORS headers", () => {
+    const rule = new CorsRule();
+    const findings = rule.evaluate(
+      createContext({
+        response: {
+          status: 200,
+          headers: {
+            "access-control-allow-origin": "https://app.example.com"
+          },
+          data: null
+        }
+      })
+    );
+
+    expect(findings).toEqual([]);
   });
 });
 
@@ -121,5 +182,25 @@ describe("SecurityHeadersRule", () => {
       severity: Severity.Medium
     });
     expect(findings[0].evidence).toContain("strict-transport-security");
+  });
+
+  it("returns no findings when all recommended headers are present", () => {
+    const rule = new SecurityHeadersRule();
+    const findings = rule.evaluate(
+      createContext({
+        response: {
+          status: 200,
+          headers: {
+            "strict-transport-security": "max-age=31536000",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "DENY",
+            "content-security-policy": "default-src 'self'"
+          },
+          data: null
+        }
+      })
+    );
+
+    expect(findings).toEqual([]);
   });
 });
