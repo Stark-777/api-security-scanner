@@ -1,164 +1,205 @@
-# 🔐 API Security Scanner
+# API Security Scanner
 
-A lightweight CLI tool for detecting common API security misconfigurations and insecure patterns.
+API Security Scanner is a TypeScript-based toolkit for checking APIs for common security misconfigurations. It includes configuration loading, a reusable HTTP client, a basic scanner engine, a first set of security rules, and console/JSON reporting helpers.
 
-Built as part of a transition into **Application Security (AppSec)** and **Security Automation**.
+## Overview
 
----
+This project is designed for developers, QA engineers, and AppSec teams who want a lightweight starting point for automated API security checks. The current implementation focuses on:
 
-## 🚀 Overview
+- loading endpoint definitions from JSON config
+- sending requests with a reusable HTTP client
+- evaluating a first set of rules against request/response data
+- generating console-friendly and JSON report output
 
-API Security Scanner helps developers and QA engineers quickly identify common security issues in APIs, such as:
+The project is intended for authorized testing only.
 
-* Missing authentication
-* Weak CORS configuration
-* Missing security headers
-* Insecure transport (HTTP)
-* Sensitive data exposure
+## Features
 
-The tool is designed to be:
+- Node.js + TypeScript project with ESLint, Prettier, and Vitest
+- JSON config loading with `zod` validation
+- Environment variable substitution in config values such as `${API_TOKEN}`
+- Reusable HTTP client with timeout support and merged headers
+- Redacted logging for sensitive values such as tokens, cookies, passwords, and API keys
+- Basic scanner engine that accepts endpoints, sends requests, and stores responses
+- Built-in security rules:
+  - HTTPS enforcement
+  - Missing authentication
+  - CORS misconfiguration
+  - Missing security headers
+- Report helpers for:
+  - console output
+  - JSON output
 
-* Fast ⚡
-* Simple to use 🧰
-* CI/CD friendly 🔄
-
----
-
-## 🧠 Why This Project Exists
-
-Modern APIs are often deployed quickly without basic security checks.
-
-This tool provides a **first layer of automated security validation** to catch common misconfigurations early in development or testing.
-
----
-
-## 🏗️ Current Status
-
-🚧 **Phase 1 Complete - Project Bootstrap**
-
-* Node.js + TypeScript setup
-* CLI entry point
-* Project structure initialized
-* Linting, formatting, and testing configured
-
-Next steps:
-
-* Core scanning engine
-* Security rules implementation
-* Reporting system
-
----
-
-## 📦 Tech Stack
-
-* Node.js
-* TypeScript
-* Commander (CLI)
-* Axios (HTTP)
-* Zod (validation)
-* Vitest (testing)
-
----
-
-## 📂 Project Structure
-
-```text
-api-security-scanner/
-├── src/
-├── test/
-├── examples/
-├── .github/
-├── PROJECT_SPEC.md
-├── IMPLEMENTATION_PLAN.md
-├── CODEX_PROMPTS.md
-└── README.md
-```
-
----
-
-## ⚙️ Installation
+## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/api-security-scanner.git
+git clone https://github.com/Stark-777/api-security-scanner.git
 cd api-security-scanner
 npm install
 ```
 
----
+## Usage
 
-## ▶️ Usage
+### Development commands
 
 ```bash
 npm run dev
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
-(Currently prints a basic CLI message. Full scanning functionality is in progress.)
+`npm run dev` currently starts the CLI bootstrap entry point and prints:
 
----
+```text
+scanner started
+```
 
-## 🛠️ Roadmap
+### Config format
 
-### v0.1 (in progress)
+The project includes an example config at [examples/configs/scanner.config.example.json](/Users/stark/src/api-security-scanner/examples/configs/scanner.config.example.json:1).
 
-* CLI bootstrap ✅
-* Core types
-* Config loader
+Required shape:
 
-### v0.2
+- `endpoints`: array of endpoint definitions
 
-* HTTP scanning engine
-* Basic security checks:
+Optional fields:
 
-  * HTTPS enforcement
-  * Missing auth detection
-  * CORS misconfiguration
-  * Security headers
+- `baseUrl`
+- `defaultHeaders`
+- `timeoutMs`
 
-### v0.3
+Each endpoint can include:
 
-* JSON reporting
-* Console output improvements
+- `url`
+- `method`
+- `headers`
+- `body`
+- `description`
 
-### v1.0
+## Examples
 
-* HTML reports
-* CI integration
-* Demo vulnerable API
+### Example config
 
----
+```json
+{
+  "baseUrl": "${API_BASE_URL}",
+  "defaultHeaders": {
+    "Authorization": "Bearer ${API_TOKEN}",
+    "X-Client": "api-security-scanner"
+  },
+  "timeoutMs": 5000,
+  "endpoints": [
+    {
+      "url": "${API_BASE_URL}/health",
+      "method": "GET",
+      "description": "Health check endpoint"
+    },
+    {
+      "url": "${API_BASE_URL}/v1/users",
+      "method": "GET",
+      "headers": {
+        "X-Tenant-Id": "${TENANT_ID}"
+      },
+      "description": "List users"
+    }
+  ]
+}
+```
 
-## 🔒 Security Disclaimer
+### Load config
 
-This tool is intended for **authorized testing only**.
+```ts
+import { loadConfig } from "api-security-scanner";
 
-* Do NOT scan systems without permission
-* This tool does NOT replace professional security audits or penetration testing
-* Findings are heuristic and may require manual validation
+const config = await loadConfig("examples/configs/scanner.config.example.json");
+```
 
----
+### Scan endpoints
 
-## 💡 Future Improvements
+```ts
+import { createScanner, loadConfig } from "api-security-scanner";
 
-* OpenAPI-based scanning
-* SARIF output
-* GitHub Actions integration
-* Custom rule packs
-* AI-assisted analysis
+const config = await loadConfig("examples/configs/scanner.config.example.json");
+const scanner = createScanner({
+  httpClientOptions: {
+    baseUrl: config.baseUrl,
+    defaultHeaders: config.defaultHeaders,
+    timeoutMs: config.timeoutMs
+  }
+});
 
----
+const probeResults = await scanner.scanEndpoints(config.endpoints);
+```
 
-## 🤝 Contributing
+### Run rules and create a report
 
-Contributions, ideas, and feedback are welcome.
+```ts
+import {
+  CorsRule,
+  HttpsEnforcedRule,
+  MissingAuthRule,
+  SecurityHeadersRule,
+  createConsoleReporter,
+  createJsonReporter,
+  createScanReport
+} from "api-security-scanner";
 
----
+const rules = [
+  new HttpsEnforcedRule(),
+  new MissingAuthRule(),
+  new CorsRule(),
+  new SecurityHeadersRule()
+];
 
-## 📣 Author
+const findings = probeResults.flatMap((result) =>
+  rules.flatMap((rule) =>
+    rule.evaluate({
+      endpoint: result.endpoint,
+      response: result.response
+    })
+  )
+);
 
-Built by a Senior QA Automation Engineer transitioning into **Cybersecurity / AppSec**.
+const report = createScanReport(findings, probeResults.length);
 
----
+createConsoleReporter().render(report);
+await createJsonReporter().write(report, "examples/reports/scan-report.json");
+```
 
-## ⭐ If you find this useful
+### Example console output shape
 
-Give the repo a star ⭐ and follow the journey!
+```text
+Scan Summary
+Endpoints scanned: 2
+Total findings: 2
+critical: 0
+high: 1
+medium: 1
+low: 0
+info: 0
+```
+
+## Current Status
+
+Implemented so far:
+
+- bootstrap and CLI entry point
+- core types and scanner model
+- config loader with env support
+- reusable HTTP client
+- initial security rules
+- console and JSON reporting
+- Vitest unit tests
+
+Not implemented yet:
+
+- HTML reporting
+- full CLI scan workflow
+- OpenAPI parsing
+- broader rule coverage
+
+## Security Note
+
+Use this project only against systems you own or are explicitly authorized to test. Findings are heuristic and should be reviewed by a human before being treated as final security conclusions.
