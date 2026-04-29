@@ -7,17 +7,17 @@
   "timeoutMs": 5000,
   "endpoints": [
     {
-      "url": "${API_BASE_URL}/health",
+      "url": "${API_BASE_URL}/get",
       "method": "GET",
-      "description": "Health check endpoint"
+      "description": "Basic GET endpoint"
     },
     {
-      "url": "${API_BASE_URL}/v1/users",
+      "url": "${API_BASE_URL}/headers",
       "method": "GET",
       "headers": {
         "X-Tenant-Id": "${TENANT_ID}"
       },
-      "description": "List users"
+      "description": "Header echo endpoint"
     }
   ]
 }

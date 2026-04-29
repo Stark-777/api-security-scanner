@@ -1,0 +1,189 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import type { AxiosInstance } from "axios";
+import { describe, expect, it, vi } from "vitest";
+
+import { ScanRunner } from "../../src/core/runner.js";
+import { Scanner } from "../../src/core/scanner.js";
+import { Severity } from "../../src/core/severity.js";
+import { HttpClient } from "../../src/http/client.js";
+import { ConsoleReporter } from "../../src/reporters/console.reporter.js";
+import { JsonReporter } from "../../src/reporters/json.reporter.js";
+import type { Logger } from "../../src/utils/logger.js";
+
+const createLogger = (): Logger => {
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  };
+};
+
+const createScannerFactory = (axiosInstance: AxiosInstance) => {
+  return (scannerOptions?: {
+    logger?: Logger;
+    httpClientOptions?: {
+      baseUrl?: string;
+      defaultHeaders?: Record<string, string>;
+      timeoutMs?: number;
+    };
+  }): Scanner => {
+    return new Scanner({
+      logger: scannerOptions?.logger,
+      httpClient: new HttpClient({
+        axiosInstance,
+        logger: scannerOptions?.logger,
+        baseUrl: scannerOptions?.httpClientOptions?.baseUrl,
+        defaultHeaders: scannerOptions?.httpClientOptions?.defaultHeaders,
+        timeoutMs: scannerOptions?.httpClientOptions?.timeoutMs
+      })
+    });
+  };
+};
+
+describe("scan runner", () => {
+  it("runs a single endpoint scan and renders console output", async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {
+        "access-control-allow-origin": "*"
+      },
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const reporterTarget = { log: vi.fn() };
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      consoleReporter: new ConsoleReporter(reporterTarget),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    const result = await runner.run({
+      input: {
+        type: "single-endpoint",
+        value: {
+          url: "http://api.example.com/users",
+          method: "GET"
+        }
+      },
+      format: "console"
+    });
+
+    expect(result.report.summary.endpointsScanned).toBe(1);
+    expect(result.findings.length).toBeGreaterThan(0);
+    expect(reporterTarget.log).toHaveBeenCalledWith("Scan Summary");
+  });
+
+  it("writes a JSON report when requested", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scan-runner-"));
+    const outputPath = join(tempDirectory, "report.json");
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const reporterWrite = vi.spyOn(JsonReporter.prototype, "write");
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      jsonReporter: new JsonReporter(),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    await runner.run({
+      input: {
+        type: "single-endpoint",
+        value: {
+          url: "https://api.example.com/health",
+          method: "GET"
+        }
+      },
+      format: "json",
+      outputPath
+    });
+
+    expect(reporterWrite).toHaveBeenCalled();
+    reporterWrite.mockRestore();
+  });
+
+  it("uses fail-on severity to mark the run as failed", async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    const result = await runner.run({
+      input: {
+        type: "single-endpoint",
+        value: {
+          url: "http://api.example.com/health",
+          method: "GET"
+        }
+      },
+      format: "console",
+      failOnSeverity: Severity.High
+    });
+
+    expect(result.shouldFail).toBe(true);
+  });
+
+  it("loads config input and uses config http client options", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scan-config-"));
+    const configPath = join(tempDirectory, "config.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        baseUrl: "https://api.example.com",
+        defaultHeaders: {
+          Authorization: "Bearer test-token"
+        },
+        timeoutMs: 1234,
+        endpoints: [
+          {
+            url: "https://api.example.com/health",
+            method: "GET"
+          }
+        ]
+      })
+    );
+
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    await runner.run({
+      input: {
+        type: "config",
+        value: {
+          configPath
+        }
+      },
+      format: "console"
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeout: 1234,
+        headers: expect.objectContaining({
+          Authorization: "Bearer test-token"
+        })
+      })
+    );
+  });
+});

@@ -1,13 +1,24 @@
 export { createCli } from "./cli/index.js";
 export { Severity } from "./core/severity.js";
 export type { Finding } from "./core/finding.js";
+export {
+  ScanRunner,
+  createScanRunner,
+  type ReportFormat,
+  type RunScanOptions,
+  type RunScanResult,
+  type ScanRunnerOptions
+} from "./core/runner.js";
 export { Scanner, createScanner, type ScannerOptions } from "./core/scanner.js";
 export type {
   Endpoint,
   HttpMethod,
   ProbeResult,
+  ScanInput,
   ScanReport,
   ScanSummary,
+  SingleEndpointScanInput,
+  ConfigFileScanInput,
   ScannerConfig
 } from "./core/types.js";
 export {

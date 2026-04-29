@@ -43,3 +43,22 @@ export interface ScanReport {
   summary: ScanSummary;
   findings: Finding[];
 }
+
+export interface SingleEndpointScanInput {
+  method: HttpMethod;
+  url: string;
+}
+
+export interface ConfigFileScanInput {
+  configPath: string;
+}
+
+export type ScanInput =
+  | {
+      type: "config";
+      value: ConfigFileScanInput;
+    }
+  | {
+      type: "single-endpoint";
+      value: SingleEndpointScanInput;
+    };

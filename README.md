@@ -44,21 +44,29 @@ npm install
 
 ```bash
 npm run dev
+npm run scan -- --url https://httpbin.org/get --method GET
 npm run lint
 npm run typecheck
 npm run test
 npm run build
 ```
 
-`npm run dev` currently starts the CLI bootstrap entry point and prints:
+`npm run dev` now builds the project and runs the CLI entrypoint from `dist`.
 
-```text
-scanner started
+Use `npm run scan -- ...` for the real scan workflow. Examples:
+
+```bash
+npm run scan -- --config examples/configs/quickstart.config.json
+npm run scan -- --url https://httpbin.org/get --method GET
+npm run scan -- --config examples/configs/quickstart.config.json --format json --output examples/reports/scan-report.json
 ```
 
 ### Config format
 
-The project includes an example config at [examples/configs/scanner.config.example.json](/Users/stark/src/api-security-scanner/examples/configs/scanner.config.example.json:1).
+The project includes:
+
+- an env-based example config at [examples/configs/scanner.config.example.json](/Users/stark/src/api-security-scanner/examples/configs/scanner.config.example.json:1)
+- a zero-setup quickstart config at [examples/configs/quickstart.config.json](/Users/stark/src/api-security-scanner/examples/configs/quickstart.config.json:1)
 
 Required shape:
 
@@ -80,6 +88,30 @@ Each endpoint can include:
 
 ## Examples
 
+### Quickstart without environment variables
+
+```bash
+npm run scan -- --config examples/configs/quickstart.config.json
+```
+
+This uses public `httpbin` endpoints and does not require any env vars.
+
+### Example with environment variables
+
+Set the env vars first:
+
+```bash
+export API_BASE_URL=https://httpbin.org
+export API_TOKEN=dummy-token
+export TENANT_ID=test-tenant
+```
+
+Then run:
+
+```bash
+npm run scan -- --config examples/configs/scanner.config.example.json
+```
+
 ### Example config
 
 ```json
@@ -92,17 +124,17 @@ Each endpoint can include:
   "timeoutMs": 5000,
   "endpoints": [
     {
-      "url": "${API_BASE_URL}/health",
+      "url": "${API_BASE_URL}/get",
       "method": "GET",
-      "description": "Health check endpoint"
+      "description": "Basic GET endpoint"
     },
     {
-      "url": "${API_BASE_URL}/v1/users",
+      "url": "${API_BASE_URL}/headers",
       "method": "GET",
       "headers": {
         "X-Tenant-Id": "${TENANT_ID}"
       },
-      "description": "List users"
+      "description": "Header echo endpoint"
     }
   ]
 }
