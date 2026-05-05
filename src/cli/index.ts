@@ -43,14 +43,16 @@ const methodChoices: HttpMethod[] = [
 ];
 
 const resolveInput = (options: ScanCommandOptions): ScanInput => {
-  if (options.openapi !== undefined) {
-    throw new Error("OpenAPI input is not implemented yet.");
-  }
-
-  const inputModes = [options.config !== undefined, options.url !== undefined].filter(Boolean);
+  const inputModes = [
+    options.config !== undefined,
+    options.openapi !== undefined,
+    options.url !== undefined
+  ].filter(Boolean);
 
   if (inputModes.length !== 1) {
-    throw new Error("Provide exactly one input mode: --config <file> or --url <endpoint>.");
+    throw new Error(
+      "Provide exactly one input mode: --config <file>, --openapi <file>, or --url <endpoint>."
+    );
   }
 
   if (options.config !== undefined) {
@@ -58,6 +60,15 @@ const resolveInput = (options: ScanCommandOptions): ScanInput => {
       type: "config",
       value: {
         configPath: options.config
+      }
+    };
+  }
+
+  if (options.openapi !== undefined) {
+    return {
+      type: "openapi",
+      value: {
+        filePath: options.openapi
       }
     };
   }
@@ -95,7 +106,7 @@ export const createCli = (options: CreateCliOptions = {}): Command => {
     .command("scan")
     .description("Scan API endpoints from config or a single URL")
     .option("--config <file>", "Path to a JSON config file")
-    .option("--openapi <file-or-url>", "OpenAPI input is reserved for a future phase")
+    .option("--openapi <file>", "Path to an OpenAPI 3.x JSON or YAML file")
     .option("--url <endpoint>", "Single endpoint URL to scan")
     .addOption(
       new Option("--method <method>", "HTTP method for single endpoint mode")

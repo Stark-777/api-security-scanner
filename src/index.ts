@@ -13,6 +13,7 @@ export { Scanner, createScanner, type ScannerOptions } from "./core/scanner.js";
 export type {
   Endpoint,
   HttpMethod,
+  OpenApiFileScanInput,
   ProbeResult,
   ScanInput,
   ScanReport,
@@ -35,6 +36,8 @@ export {
   loadConfig,
   resolveEnvVariables
 } from "./parsers/config.parser.js";
+export { resolveScanInput, type ResolvedScanInput } from "./parsers/input.parser.js";
+export { OpenApiLoaderError, loadOpenApiInput } from "./parsers/openapi.parser.js";
 export {
   ConsoleReporter,
   createConsoleReporter,

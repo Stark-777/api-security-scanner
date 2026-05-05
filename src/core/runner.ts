@@ -1,14 +1,8 @@
 import type { Finding } from "./finding.js";
 import { Severity } from "./severity.js";
-import type {
-  Endpoint,
-  HttpMethod,
-  ProbeResult,
-  ScanInput,
-  ScanReport
-} from "./types.js";
+import type { ProbeResult, ScanInput, ScanReport } from "./types.js";
 import { Scanner, type ScannerOptions } from "./scanner.js";
-import { loadConfig } from "../parsers/config.parser.js";
+import { resolveScanInput } from "../parsers/input.parser.js";
 import { ConsoleReporter } from "../reporters/console.reporter.js";
 import { createScanReport } from "../reporters/helpers.js";
 import { JsonReporter } from "../reporters/json.reporter.js";
@@ -90,27 +84,6 @@ const evaluateRules = async (
   return findings;
 };
 
-const normalizeSingleEndpointInput = (
-  input: ScanInput["value"] & { url?: string; method?: HttpMethod }
-): Endpoint[] => {
-  if (input.url === undefined) {
-    throw new Error("Single endpoint input requires a URL.");
-  }
-
-  try {
-    new URL(input.url);
-  } catch (error) {
-    throw new Error(`Invalid endpoint URL: ${input.url}`, { cause: error });
-  }
-
-  return [
-    {
-      url: input.url,
-      method: input.method ?? "GET"
-    }
-  ];
-};
-
 export class ScanRunner {
   private readonly consoleReporter: ConsoleReporter;
   private readonly jsonReporter: JsonReporter;
@@ -168,27 +141,17 @@ export class ScanRunner {
 
   private async resolveScanTargets(
     input: ScanInput
-  ): Promise<{ endpoints: Endpoint[]; scannerOptions?: ScannerOptions }> {
-    if (input.type === "config") {
-      const config = await loadConfig(input.value.configPath);
-
-      return {
-        endpoints: config.endpoints,
-        scannerOptions: {
-          logger: this.logger,
-          httpClientOptions: {
-            baseUrl: config.baseUrl,
-            defaultHeaders: config.defaultHeaders,
-            timeoutMs: config.timeoutMs
-          }
-        }
-      };
-    }
+  ): Promise<{
+    endpoints: ProbeResult["endpoint"][];
+    scannerOptions?: ScannerOptions;
+  }> {
+    const resolvedInput = await resolveScanInput(input);
 
     return {
-      endpoints: normalizeSingleEndpointInput(input.value),
+      endpoints: resolvedInput.endpoints,
       scannerOptions: {
-        logger: this.logger
+        logger: this.logger,
+        httpClientOptions: resolvedInput.httpClientOptions
       }
     };
   }

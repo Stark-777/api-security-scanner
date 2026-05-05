@@ -186,4 +186,53 @@ describe("scan runner", () => {
       })
     );
   });
+
+  it("loads openapi input and scans extracted endpoints", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scan-openapi-"));
+    const openApiPath = join(tempDirectory, "openapi.json");
+
+    await writeFile(
+      openApiPath,
+      JSON.stringify({
+        openapi: "3.0.3",
+        servers: [{ url: "https://api.example.com" }],
+        paths: {
+          "/users": {
+            get: {
+              summary: "List users"
+            }
+          }
+        }
+      })
+    );
+
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    const result = await runner.run({
+      input: {
+        type: "openapi",
+        value: {
+          filePath: openApiPath
+        }
+      },
+      format: "console"
+    });
+
+    expect(result.report.summary.endpointsScanned).toBe(1);
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://api.example.com/users",
+        method: "GET"
+      })
+    );
+  });
 });

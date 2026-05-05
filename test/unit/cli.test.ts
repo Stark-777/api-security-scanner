@@ -133,23 +133,32 @@ describe("cli scan command", () => {
     );
 
     expect(error).toHaveBeenCalledWith(
-      "Provide exactly one input mode: --config <file> or --url <endpoint>."
+      "Provide exactly one input mode: --config <file>, --openapi <file>, or --url <endpoint>."
     );
     expect(process.exitCode).toBe(1);
   });
 
-  it("rejects openapi input for this phase", async () => {
-    const error = vi.fn();
+  it("routes openapi input through the runner", async () => {
+    const run = vi.fn().mockResolvedValue(createRunResult());
     const program = createCli({
-      runner: { run: vi.fn() } as unknown as ScanRunner,
-      io: { log: vi.fn(), error }
+      runner: { run } as unknown as ScanRunner,
+      io: { log: vi.fn(), error: vi.fn() }
     });
 
     await program.parseAsync(["scan", "--openapi", "./openapi.yaml"], {
       from: "user"
     });
 
-    expect(error).toHaveBeenCalledWith("OpenAPI input is not implemented yet.");
-    expect(process.exitCode).toBe(1);
+    expect(run).toHaveBeenCalledWith({
+      input: {
+        type: "openapi",
+        value: {
+          filePath: "./openapi.yaml"
+        }
+      },
+      format: "console",
+      outputPath: undefined,
+      failOnSeverity: undefined
+    });
   });
 });

@@ -45,6 +45,7 @@ npm install
 ```bash
 npm run dev
 npm run scan -- --url https://httpbin.org/get --method GET
+npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run lint
 npm run typecheck
 npm run test
@@ -58,6 +59,7 @@ Use `npm run scan -- ...` for the real scan workflow. Examples:
 ```bash
 npm run scan -- --config examples/configs/quickstart.config.json
 npm run scan -- --url https://httpbin.org/get --method GET
+npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run scan -- --config examples/configs/quickstart.config.json --format json --output examples/reports/scan-report.json
 ```
 
@@ -110,6 +112,16 @@ Then run:
 
 ```bash
 npm run scan -- --config examples/configs/scanner.config.example.json
+```
+
+### Example OpenAPI scan
+
+The project includes a local OpenAPI example at [examples/openapi/example-openapi.yaml](/Users/stark/src/api-security-scanner/examples/openapi/example-openapi.yaml:1).
+
+Run it with:
+
+```bash
+npm run scan -- --openapi examples/openapi/example-openapi.yaml
 ```
 
 ### Example config
@@ -223,13 +235,13 @@ Implemented so far:
 - reusable HTTP client
 - initial security rules
 - console and JSON reporting
+- full CLI scan workflow
+- OpenAPI JSON/YAML input
 - Vitest unit tests
 
 Not implemented yet:
 
 - HTML reporting
-- full CLI scan workflow
-- OpenAPI parsing
 - broader rule coverage
 
 ## Security Note

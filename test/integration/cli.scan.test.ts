@@ -81,4 +81,63 @@ describe("cli integration-like scan flow", () => {
     expect(log).toHaveBeenCalledWith(`JSON report written to ${outputPath}`);
     expect(error).not.toHaveBeenCalled();
   });
+
+  it("loads local openapi input and writes a JSON report", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "cli-openapi-"));
+    const openApiPath = join(tempDirectory, "openapi.yaml");
+    const outputPath = join(tempDirectory, "report.json");
+
+    await writeFile(
+      openApiPath,
+      `
+openapi: 3.0.3
+servers:
+  - url: https://api.example.com
+paths:
+  /users:
+    get:
+      summary: List users
+`
+    );
+
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const logger = createLogger();
+    const runner = new ScanRunner({
+      logger,
+      scannerFactory: (scannerOptions) =>
+        new Scanner({
+          logger: scannerOptions?.logger,
+          httpClient: new HttpClient({
+            axiosInstance,
+            logger: scannerOptions?.logger,
+            baseUrl: scannerOptions?.httpClientOptions?.baseUrl,
+            defaultHeaders: scannerOptions?.httpClientOptions?.defaultHeaders,
+            timeoutMs: scannerOptions?.httpClientOptions?.timeoutMs
+          })
+        })
+    });
+    const log = vi.fn();
+    const error = vi.fn();
+    const program = createCli({
+      runner,
+      io: { log, error }
+    });
+
+    await program.parseAsync(
+      ["scan", "--openapi", openApiPath, "--format", "json", "--output", outputPath],
+      { from: "user" }
+    );
+
+    const report = JSON.parse(await readFile(outputPath, "utf8"));
+
+    expect(report.summary.endpointsScanned).toBe(1);
+    expect(report.findings).toHaveLength(2);
+    expect(log).toHaveBeenCalledWith(`JSON report written to ${outputPath}`);
+    expect(error).not.toHaveBeenCalled();
+  });
 });

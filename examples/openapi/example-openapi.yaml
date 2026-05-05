@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: https://httpbin.org
+paths:
+  /get:
+    get:
+      summary: Example GET endpoint
+  /headers:
+    get:
+      summary: Example headers endpoint

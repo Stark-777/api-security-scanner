@@ -53,10 +53,18 @@ export interface ConfigFileScanInput {
   configPath: string;
 }
 
+export interface OpenApiFileScanInput {
+  filePath: string;
+}
+
 export type ScanInput =
   | {
       type: "config";
       value: ConfigFileScanInput;
+    }
+  | {
+      type: "openapi";
+      value: OpenApiFileScanInput;
     }
   | {
       type: "single-endpoint";
