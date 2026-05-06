@@ -6,11 +6,16 @@ import { resolveScanInput } from "../parsers/input.parser.js";
 import { ConsoleReporter } from "../reporters/console.reporter.js";
 import { createScanReport } from "../reporters/helpers.js";
 import { JsonReporter } from "../reporters/json.reporter.js";
+import { ContentTypeRule } from "../rules/content-type.rule.js";
 import { CorsRule } from "../rules/cors.rule.js";
+import { DangerousMethodsRule } from "../rules/dangerous-methods.rule.js";
 import { HttpsEnforcedRule } from "../rules/https-enforced.rule.js";
+import { RateLimitRule } from "../rules/rate-limit.rule.js";
 import { MissingAuthRule } from "../rules/missing-auth.rule.js";
+import { SensitiveDataExposureRule } from "../rules/sensitive-data-exposure.rule.js";
 import type { Rule } from "../rules/rule.js";
 import { SecurityHeadersRule } from "../rules/security-headers.rule.js";
+import { VerboseErrorsRule } from "../rules/verbose-errors.rule.js";
 import { createLogger, type Logger } from "../utils/logger.js";
 
 export type ReportFormat = "console" | "json";
@@ -50,7 +55,12 @@ const defaultRules = (): Rule[] => {
     new HttpsEnforcedRule(),
     new MissingAuthRule(),
     new CorsRule(),
-    new SecurityHeadersRule()
+    new SecurityHeadersRule(),
+    new DangerousMethodsRule(),
+    new SensitiveDataExposureRule(),
+    new VerboseErrorsRule(),
+    new RateLimitRule(),
+    new ContentTypeRule()
   ];
 };
 

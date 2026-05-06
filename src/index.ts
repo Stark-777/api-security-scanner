@@ -49,10 +49,15 @@ export {
   createScanReport,
   createScanSummary
 } from "./reporters/helpers.js";
+export { ContentTypeRule } from "./rules/content-type.rule.js";
 export { CorsRule } from "./rules/cors.rule.js";
+export { DangerousMethodsRule } from "./rules/dangerous-methods.rule.js";
 export { HttpsEnforcedRule } from "./rules/https-enforced.rule.js";
+export { RateLimitRule } from "./rules/rate-limit.rule.js";
 export { MissingAuthRule } from "./rules/missing-auth.rule.js";
+export { SensitiveDataExposureRule } from "./rules/sensitive-data-exposure.rule.js";
 export { SecurityHeadersRule } from "./rules/security-headers.rule.js";
+export { VerboseErrorsRule } from "./rules/verbose-errors.rule.js";
 export type { Rule, RuleContext } from "./rules/rule.js";
 export {
   REDACTED_VALUE,

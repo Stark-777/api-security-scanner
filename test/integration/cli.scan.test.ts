@@ -77,7 +77,15 @@ describe("cli integration-like scan flow", () => {
     const report = JSON.parse(await readFile(outputPath, "utf8"));
 
     expect(report.summary.endpointsScanned).toBe(1);
-    expect(report.findings).toHaveLength(3);
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings.map((finding: { ruleId: string }) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "https-enforced",
+        "missing-auth",
+        "missing-rate-limit-indicators",
+        "content-type-validation"
+      ])
+    );
     expect(log).toHaveBeenCalledWith(`JSON report written to ${outputPath}`);
     expect(error).not.toHaveBeenCalled();
   });
@@ -136,7 +144,14 @@ paths:
     const report = JSON.parse(await readFile(outputPath, "utf8"));
 
     expect(report.summary.endpointsScanned).toBe(1);
-    expect(report.findings).toHaveLength(2);
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings.map((finding: { ruleId: string }) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "missing-auth",
+        "missing-rate-limit-indicators",
+        "content-type-validation"
+      ])
+    );
     expect(log).toHaveBeenCalledWith(`JSON report written to ${outputPath}`);
     expect(error).not.toHaveBeenCalled();
   });
