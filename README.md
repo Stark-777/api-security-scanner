@@ -51,6 +51,8 @@ npm install
 
 ```bash
 npm run dev
+npm run ci:check
+npm run docker:build
 npm run scan -- --url https://httpbin.org/get --method GET
 npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run lint
@@ -69,6 +71,7 @@ npm run scan -- --url https://httpbin.org/get --method GET
 npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run scan -- --config examples/configs/quickstart.config.json --format json --output examples/reports/scan-report.json
 npm run scan -- --openapi examples/openapi/example-openapi.yaml --format html --output examples/reports/scan-report.html
+npm run scan -- --config examples/configs/quickstart.config.json --fail-on high
 ```
 
 ### Config format
@@ -136,6 +139,72 @@ npm run scan -- --openapi examples/openapi/example-openapi.yaml
 
 ```bash
 npm run scan -- --config examples/configs/quickstart.config.json --format html --output examples/reports/scan-report.html
+```
+
+### Example CI-friendly failure behavior
+
+```bash
+npm run scan -- --config examples/configs/quickstart.config.json --fail-on high
+echo $?
+```
+
+If any finding meets or exceeds the selected severity threshold, the CLI exits with code `2`. Runtime or config failures exit with code `1`.
+
+## CI and Docker
+
+### GitHub Actions
+
+The repository workflow runs:
+
+- `npm ci`
+- `npm run ci:check`
+- `npm run scan -- --config examples/configs/quickstart.config.json --fail-on high`
+
+The workflow file lives at [.github/workflows/ci.yml](/Users/stark/src/api-security-scanner/.github/workflows/ci.yml:1).
+
+### Local CI parity
+
+Run the same validation sequence locally with:
+
+```bash
+npm run ci:check
+```
+
+### Docker build
+
+Build the container image:
+
+```bash
+npm run docker:build
+```
+
+Or directly:
+
+```bash
+docker build -t api-security-scanner .
+```
+
+### Docker usage
+
+Show CLI help:
+
+```bash
+docker run --rm api-security-scanner
+```
+
+Run a scan from the bundled examples:
+
+```bash
+docker run --rm api-security-scanner scan --config examples/configs/quickstart.config.json
+```
+
+Write a JSON artifact to a mounted local directory:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/examples/reports:/app/examples/reports" \
+  api-security-scanner \
+  scan --config examples/configs/quickstart.config.json --format json --output examples/reports/scan-report.json
 ```
 
 ### Example config
@@ -255,11 +324,12 @@ Implemented so far:
 - console, JSON, and HTML reporting
 - full CLI scan workflow
 - OpenAPI JSON/YAML input
+- GitHub Actions workflow
+- Docker support
 - Vitest unit tests
 
 Not implemented yet:
 
-- CI and release workflow
 - hardening and product-readiness work
 
 ## Security Note

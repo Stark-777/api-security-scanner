@@ -8,10 +8,13 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "ci:check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "dev": "npm run build && node dist/cli/index.js",
+    "docker:build": "docker build -t api-security-scanner .",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "release:smoke": "npm run ci:check",
     "scan": "npm run build && node dist/cli/index.js scan",
     "test": "vitest run",
     "test:watch": "vitest",
