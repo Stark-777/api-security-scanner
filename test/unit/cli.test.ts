@@ -208,4 +208,23 @@ describe("cli scan command", () => {
       "HTML report written to reports/scan-report.html"
     );
   });
+
+  it("redacts sensitive values in surfaced error messages", async () => {
+    const error = vi.fn();
+    const run = vi.fn().mockRejectedValue(
+      new Error("Authorization: Bearer secret-token")
+    );
+    const program = createCli({
+      runner: { run } as unknown as ScanRunner,
+      io: { log: vi.fn(), error }
+    });
+
+    await program.parseAsync(
+      ["scan", "--url", "https://api.example.com/users"],
+      { from: "user" }
+    );
+
+    expect(error).toHaveBeenCalledWith("Authorization: Bearer [REDACTED]");
+    expect(process.exitCode).toBe(1);
+  });
 });

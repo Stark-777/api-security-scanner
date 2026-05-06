@@ -1,7 +1,7 @@
 import type { Finding } from "../core/finding.js";
 import type { ScanReport } from "../core/types.js";
 import type { Reporter } from "./reporter.js";
-import { severityOrder } from "./helpers.js";
+import { sanitizeScanReport, severityOrder } from "./helpers.js";
 
 export interface ConsoleReporterTarget {
   log(message?: unknown, ...optionalParams: unknown[]): void;
@@ -13,7 +13,9 @@ export class ConsoleReporter implements Reporter {
   ) {}
 
   render(report: ScanReport): void {
-    for (const line of this.createLines(report)) {
+    const sanitizedReport = sanitizeScanReport(report);
+
+    for (const line of this.createLines(sanitizedReport)) {
       this.target.log(line);
     }
   }

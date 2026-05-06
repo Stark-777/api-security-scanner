@@ -4,7 +4,8 @@ import {
   REDACTED_VALUE,
   createLogger,
   redactHeaders,
-  redactSensitiveData
+  redactSensitiveData,
+  redactSensitiveString
 } from "../../src/utils/logger.js";
 
 describe("logger helpers", () => {
@@ -38,6 +39,16 @@ describe("logger helpers", () => {
         name: "scanner"
       }
     });
+  });
+
+  it("redacts sensitive values embedded in strings", () => {
+    expect(
+      redactSensitiveString(
+        "Authorization: Bearer secret-token?token=abc123&password=hunter2"
+      )
+    ).toBe(
+      "Authorization: Bearer [REDACTED]?token=[REDACTED]&password=[REDACTED]"
+    );
   });
 
   it("logs redacted metadata", () => {

@@ -6,6 +6,7 @@ import type { AxiosInstance } from "axios";
 import { describe, expect, it, vi } from "vitest";
 
 import { ScanRunner } from "../../src/core/runner.js";
+import type { ReportOutputError } from "../../src/core/errors.js";
 import { Scanner } from "../../src/core/scanner.js";
 import { Severity } from "../../src/core/severity.js";
 import { HttpClient } from "../../src/http/client.js";
@@ -140,6 +141,42 @@ describe("scan runner", () => {
 
     expect(reporterWrite).toHaveBeenCalled();
     reporterWrite.mockRestore();
+  });
+
+  it("wraps report write failures with output context", async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      jsonReporter: {
+        render: vi.fn(),
+        generate: vi.fn(),
+        write: vi.fn().mockRejectedValue(new Error("disk full"))
+      } as unknown as JsonReporter,
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    await expect(
+      runner.run({
+        input: {
+          type: "single-endpoint",
+          value: {
+            url: "https://api.example.com/health",
+            method: "GET"
+          }
+        },
+        format: "json",
+        outputPath: "reports/out.json"
+      })
+    ).rejects.toMatchObject<ReportOutputError>({
+      name: "ReportOutputError",
+      outputPath: "reports/out.json",
+      message: "Failed to write JSON report to reports/out.json"
+    });
   });
 
   it("uses fail-on severity to mark the run as failed", async () => {

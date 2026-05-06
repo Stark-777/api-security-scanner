@@ -57,6 +57,8 @@ npm run scan -- --url https://httpbin.org/get --method GET
 npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run lint
 npm run typecheck
+npm run test:unit
+npm run test:integration
 npm run test
 npm run build
 ```
@@ -150,6 +152,8 @@ echo $?
 
 If any finding meets or exceeds the selected severity threshold, the CLI exits with code `2`. Runtime or config failures exit with code `1`.
 
+If a request times out, the CLI returns an actionable message that includes the timeout value and suggests checking API availability or increasing `timeoutMs`.
+
 ## CI and Docker
 
 ### GitHub Actions
@@ -168,6 +172,13 @@ Run the same validation sequence locally with:
 
 ```bash
 npm run ci:check
+```
+
+Or run the verification tiers separately:
+
+```bash
+npm run test:unit
+npm run test:integration
 ```
 
 ### Docker build
@@ -326,11 +337,16 @@ Implemented so far:
 - OpenAPI JSON/YAML input
 - GitHub Actions workflow
 - Docker support
-- Vitest unit tests
+- Vitest unit and integration tests
+- hardening for timeout messaging and output redaction
 
 Not implemented yet:
 
-- hardening and product-readiness work
+- no additional roadmap phases are pending in the current plan
+
+## Release Readiness
+
+A release checklist is available at [RELEASE_CHECKLIST.md](/Users/stark/src/api-security-scanner/RELEASE_CHECKLIST.md:1).
 
 ## Security Note
 

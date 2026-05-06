@@ -5,6 +5,7 @@ import type {
   ScanReportMetadata,
   ScanSummary
 } from "../core/types.js";
+import { redactSensitiveData } from "../utils/logger.js";
 
 export const REPORT_VERSION = "1.0";
 export const TOOL_NAME = "api-security-scanner";
@@ -56,4 +57,8 @@ export const createScanReport = (
     summary: createScanSummary(findings, endpointsScanned),
     findings
   };
+};
+
+export const sanitizeScanReport = (report: ScanReport): ScanReport => {
+  return redactSensitiveData(report) as ScanReport;
 };

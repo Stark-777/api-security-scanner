@@ -85,6 +85,25 @@ describe("ConsoleReporter", () => {
 
     expect(log).toHaveBeenCalledWith("No findings detected.");
   });
+
+  it("redacts sensitive values in console output", () => {
+    const log = vi.fn();
+    const reporter = new ConsoleReporter({ log });
+
+    reporter.render(
+      createScanReport(
+        [
+          {
+            ...sampleFindings[0],
+            evidence: "Authorization: Bearer secret-token"
+          }
+        ],
+        1
+      )
+    );
+
+    expect(log).toHaveBeenCalledWith("Evidence: Authorization: Bearer [REDACTED]");
+  });
 });
 
 describe("JsonReporter", () => {
@@ -126,6 +145,24 @@ describe("JsonReporter", () => {
       findings: sampleFindings
     });
   });
+
+  it("redacts sensitive values in generated JSON output", () => {
+    const reporter = new JsonReporter();
+    const result = reporter.generate(
+      createScanReport(
+        [
+          {
+            ...sampleFindings[0],
+            evidence: "token=super-secret-token"
+          }
+        ],
+        1
+      )
+    );
+
+    expect(result).toContain("token=[REDACTED]");
+    expect(result).not.toContain("super-secret-token");
+  });
 });
 
 describe("HtmlReporter", () => {
@@ -151,5 +188,23 @@ describe("HtmlReporter", () => {
 
     expect(fileContents).toContain("<html lang=\"en\">");
     expect(fileContents).toContain("Response is missing recommended security headers");
+  });
+
+  it("redacts sensitive values in generated HTML output", () => {
+    const reporter = new HtmlReporter();
+    const result = reporter.generate(
+      createScanReport(
+        [
+          {
+            ...sampleFindings[0],
+            evidence: "password=hunter2"
+          }
+        ],
+        1
+      )
+    );
+
+    expect(result).toContain("password=[REDACTED]");
+    expect(result).not.toContain("hunter2");
   });
 });

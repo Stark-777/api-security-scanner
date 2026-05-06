@@ -29,11 +29,13 @@ describe("ci and release assets", () => {
     };
 
     expect(packageJson.scripts["ci:check"]).toBe(
-      "npm run lint && npm run typecheck && npm run test && npm run build"
+      "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration && npm run build"
     );
     expect(packageJson.scripts["docker:build"]).toBe(
       "docker build -t api-security-scanner ."
     );
     expect(packageJson.scripts["release:smoke"]).toBe("npm run ci:check");
+    expect(packageJson.scripts["test:unit"]).toBe("vitest run test/unit");
+    expect(packageJson.scripts["test:integration"]).toBe("vitest run test/integration");
   });
 });

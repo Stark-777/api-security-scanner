@@ -3,6 +3,7 @@
 import { pathToFileURL } from "node:url";
 import { Command, Option } from "commander";
 
+import { CliUsageError, toUserFacingErrorMessage } from "../core/errors.js";
 import {
   createScanRunner,
   type RunScanOptions,
@@ -50,7 +51,7 @@ const resolveInput = (options: ScanCommandOptions): ScanInput => {
   ].filter(Boolean);
 
   if (inputModes.length !== 1) {
-    throw new Error(
+    throw new CliUsageError(
       "Provide exactly one input mode: --config <file>, --openapi <file>, or --url <endpoint>."
     );
   }
@@ -87,11 +88,15 @@ const validateOutputOptions = (options: ScanCommandOptions): void => {
     (options.format === "json" || options.format === "html") &&
     options.output === undefined
   ) {
-    throw new Error(`${options.format.toUpperCase()} output requires --output <path>.`);
+    throw new CliUsageError(
+      `${options.format.toUpperCase()} output requires --output <path>.`
+    );
   }
 
   if (options.format === "console" && options.output !== undefined) {
-    throw new Error("--output can only be used with --format json or --format html.");
+    throw new CliUsageError(
+      "--output can only be used with --format json or --format html."
+    );
   }
 };
 
@@ -153,9 +158,7 @@ export const createCli = (options: CreateCliOptions = {}): Command => {
           process.exitCode = 2;
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Scan failed with an unknown error.";
-        io.error(message);
+        io.error(toUserFacingErrorMessage(error));
         process.exitCode = 1;
       }
     });

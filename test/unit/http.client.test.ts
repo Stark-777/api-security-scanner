@@ -180,4 +180,28 @@ describe("http client", () => {
       message: "timeout exceeded"
     });
   });
+
+  it("returns an actionable timeout error message", async () => {
+    const logger: Logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+    const axiosError = new AxiosError("timeout exceeded", "ECONNABORTED");
+    const request = vi.fn().mockRejectedValue(axiosError);
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const client = new HttpClient({ axiosInstance, logger, timeoutMs: 1500 });
+
+    await expect(
+      client.request({
+        url: "https://api.example.com/slow",
+        method: "GET"
+      })
+    ).rejects.toMatchObject<HttpClientError>({
+      message:
+        "HTTP request timed out for GET https://api.example.com/slow after 1500ms. Consider increasing timeoutMs or checking API availability.",
+      timeoutMs: 1500,
+      code: "ECONNABORTED"
+    });
+  });
 });

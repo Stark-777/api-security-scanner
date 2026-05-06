@@ -36,6 +36,7 @@ export interface HttpResponse {
 export class HttpClientError extends Error {
   readonly code?: string;
   readonly status?: number;
+  readonly timeoutMs?: number;
   readonly url: string;
   readonly method: HttpMethod;
 
@@ -45,12 +46,14 @@ export class HttpClientError extends Error {
     method: HttpMethod;
     code?: string;
     status?: number;
+    timeoutMs?: number;
     cause?: unknown;
   }) {
     super(options.message, { cause: options.cause });
     this.name = "HttpClientError";
     this.code = options.code;
     this.status = options.status;
+    this.timeoutMs = options.timeoutMs;
     this.url = options.url;
     this.method = options.method;
   }
@@ -143,10 +146,13 @@ export class HttpClient {
     if (error instanceof AxiosError) {
       const status = error.response?.status;
       const responseHeaders = normalizeHeaders(error.response?.headers);
-      const message =
-        status === undefined
-          ? `HTTP request failed for ${options.method} ${options.url}`
-          : `HTTP request failed for ${options.method} ${options.url} with status ${status}`;
+      const message = this.createErrorMessage({
+        url: options.url,
+        method: options.method,
+        status,
+        code: error.code,
+        timeout
+      });
 
       this.logger.error("HTTP request failed", {
         url: options.url,
@@ -165,6 +171,7 @@ export class HttpClient {
         method: options.method,
         code: error.code,
         status,
+        timeoutMs: timeout,
         cause: error
       });
     }
@@ -181,8 +188,35 @@ export class HttpClient {
       message: `HTTP request failed for ${options.method} ${options.url}`,
       url: options.url,
       method: options.method,
+      timeoutMs: timeout,
       cause: error
     });
+  }
+
+  private createErrorMessage(options: {
+    url: string;
+    method: HttpMethod;
+    status?: number;
+    code?: string;
+    timeout: number;
+  }): string {
+    if (options.code === "ECONNABORTED") {
+      return `HTTP request timed out for ${options.method} ${options.url} after ${options.timeout}ms. Consider increasing timeoutMs or checking API availability.`;
+    }
+
+    if (options.code === "ENOTFOUND" || options.code === "EAI_AGAIN") {
+      return `HTTP request failed for ${options.method} ${options.url} because the host could not be resolved. Check the hostname and your network or DNS configuration.`;
+    }
+
+    if (options.code === "ECONNREFUSED") {
+      return `HTTP request failed for ${options.method} ${options.url} because the connection was refused. Confirm that the API is running and reachable.`;
+    }
+
+    if (options.status !== undefined) {
+      return `HTTP request failed for ${options.method} ${options.url} with status ${options.status}`;
+    }
+
+    return `HTTP request failed for ${options.method} ${options.url}`;
   }
 }
 

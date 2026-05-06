@@ -2,7 +2,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { AxiosInstance } from "axios";
+import { AxiosError, type AxiosInstance } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCli } from "../../src/cli/index.js";
@@ -24,6 +24,58 @@ afterEach(() => {
 });
 
 describe("cli integration-like scan flow", () => {
+  it("runs a console scan happy path from config input", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "cli-console-"));
+    const configPath = join(tempDirectory, "config.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        endpoints: [
+          {
+            url: "https://api.example.com/users",
+            method: "GET"
+          }
+        ]
+      })
+    );
+
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const logger = createLogger();
+    const runner = new ScanRunner({
+      logger,
+      scannerFactory: (scannerOptions) =>
+        new Scanner({
+          logger: scannerOptions?.logger,
+          httpClient: new HttpClient({
+            axiosInstance,
+            logger: scannerOptions?.logger,
+            baseUrl: scannerOptions?.httpClientOptions?.baseUrl,
+            defaultHeaders: scannerOptions?.httpClientOptions?.defaultHeaders,
+            timeoutMs: scannerOptions?.httpClientOptions?.timeoutMs
+          })
+        })
+    });
+    const log = vi.fn();
+    const error = vi.fn();
+    const program = createCli({
+      runner,
+      io: { log, error }
+    });
+
+    await program.parseAsync(["scan", "--config", configPath], {
+      from: "user"
+    });
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(error).not.toHaveBeenCalled();
+  });
+
   it("loads config input and writes a JSON report", async () => {
     const tempDirectory = await mkdtemp(join(tmpdir(), "cli-scan-"));
     const configPath = join(tempDirectory, "config.json");
@@ -212,5 +264,60 @@ paths:
     expect(report).toContain("API Security Scan Report");
     expect(log).toHaveBeenCalledWith(`HTML report written to ${outputPath}`);
     expect(error).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a redacted, actionable timeout failure", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "cli-timeout-"));
+    const configPath = join(tempDirectory, "config.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        defaultHeaders: {
+          Authorization: "Bearer secret-token"
+        },
+        timeoutMs: 1500,
+        endpoints: [
+          {
+            url: "https://api.example.com/slow",
+            method: "GET"
+          }
+        ]
+      })
+    );
+
+    const request = vi.fn().mockRejectedValue(new AxiosError("timeout exceeded", "ECONNABORTED"));
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const logger = createLogger();
+    const runner = new ScanRunner({
+      logger,
+      scannerFactory: (scannerOptions) =>
+        new Scanner({
+          logger: scannerOptions?.logger,
+          httpClient: new HttpClient({
+            axiosInstance,
+            logger: scannerOptions?.logger,
+            baseUrl: scannerOptions?.httpClientOptions?.baseUrl,
+            defaultHeaders: scannerOptions?.httpClientOptions?.defaultHeaders,
+            timeoutMs: scannerOptions?.httpClientOptions?.timeoutMs
+          })
+        })
+    });
+    const log = vi.fn();
+    const error = vi.fn();
+    const program = createCli({
+      runner,
+      io: { log, error }
+    });
+
+    await program.parseAsync(["scan", "--config", configPath], {
+      from: "user"
+    });
+
+    expect(error).toHaveBeenCalledWith(
+      "HTTP request timed out for GET https://api.example.com/slow after 1500ms. Consider increasing timeoutMs or checking API availability."
+    );
+    expect(error).not.toHaveBeenCalledWith(expect.stringContaining("secret-token"));
+    expect(process.exitCode).toBe(1);
   });
 });

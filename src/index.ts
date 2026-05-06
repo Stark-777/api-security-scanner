@@ -1,4 +1,10 @@
 export { createCli } from "./cli/index.js";
+export {
+  CliUsageError,
+  ReportOutputError,
+  ScanInputError,
+  toUserFacingErrorMessage
+} from "./core/errors.js";
 export { Severity } from "./core/severity.js";
 export type { Finding } from "./core/finding.js";
 export {
@@ -52,7 +58,8 @@ export {
   createEmptySeverityCounts,
   createScanReport,
   createScanReportMetadata,
-  createScanSummary
+  createScanSummary,
+  sanitizeScanReport
 } from "./reporters/helpers.js";
 export type { Reporter } from "./reporters/reporter.js";
 export { ContentTypeRule } from "./rules/content-type.rule.js";
@@ -70,5 +77,6 @@ export {
   createLogger,
   redactSensitiveData,
   redactHeaders,
+  redactSensitiveString,
   type Logger
 } from "./utils/logger.js";

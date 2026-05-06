@@ -1,4 +1,5 @@
 import type { Endpoint, ScanInput } from "../core/types.js";
+import { ScanInputError } from "../core/errors.js";
 import { loadConfig } from "./config.parser.js";
 import { loadOpenApiInput } from "./openapi.parser.js";
 
@@ -15,7 +16,7 @@ const validateSingleEndpointUrl = (url: string): void => {
   try {
     new URL(url);
   } catch (error) {
-    throw new Error(`Invalid endpoint URL: ${url}`, { cause: error });
+    throw new ScanInputError(`Invalid endpoint URL: ${url}`, error);
   }
 };
 

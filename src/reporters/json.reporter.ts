@@ -2,11 +2,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { ScanReport } from "../core/types.js";
+import { sanitizeScanReport } from "./helpers.js";
 import type { Reporter } from "./reporter.js";
 
 export class JsonReporter implements Reporter {
   generate(report: ScanReport): string {
-    return JSON.stringify(report, null, 2);
+    return JSON.stringify(sanitizeScanReport(report), null, 2);
   }
 
   render(report: ScanReport): void {

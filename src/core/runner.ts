@@ -1,4 +1,5 @@
 import type { Finding } from "./finding.js";
+import { ReportOutputError } from "./errors.js";
 import { Severity } from "./severity.js";
 import type { ProbeResult, ScanInput, ScanReport } from "./types.js";
 import { Scanner, type ScannerOptions } from "./scanner.js";
@@ -135,10 +136,18 @@ export class ScanRunner {
         throw new Error(`${options.format.toUpperCase()} output requires --output <path>.`);
       }
 
-      if (options.format === "json") {
-        await this.jsonReporter.write(report, options.outputPath);
-      } else {
-        await this.htmlReporter.write(report, options.outputPath);
+      try {
+        if (options.format === "json") {
+          await this.jsonReporter.write(report, options.outputPath);
+        } else {
+          await this.htmlReporter.write(report, options.outputPath);
+        }
+      } catch (error) {
+        throw new ReportOutputError(
+          `Failed to write ${options.format.toUpperCase()} report to ${options.outputPath}`,
+          options.outputPath,
+          error
+        );
       }
 
       this.logger.info(`${options.format.toUpperCase()} report written`, {
