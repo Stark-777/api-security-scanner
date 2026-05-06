@@ -5,6 +5,7 @@ import { Scanner, type ScannerOptions } from "./scanner.js";
 import { resolveScanInput } from "../parsers/input.parser.js";
 import { ConsoleReporter } from "../reporters/console.reporter.js";
 import { createScanReport } from "../reporters/helpers.js";
+import { HtmlReporter } from "../reporters/html.reporter.js";
 import { JsonReporter } from "../reporters/json.reporter.js";
 import { ContentTypeRule } from "../rules/content-type.rule.js";
 import { CorsRule } from "../rules/cors.rule.js";
@@ -18,7 +19,7 @@ import { SecurityHeadersRule } from "../rules/security-headers.rule.js";
 import { VerboseErrorsRule } from "../rules/verbose-errors.rule.js";
 import { createLogger, type Logger } from "../utils/logger.js";
 
-export type ReportFormat = "console" | "json";
+export type ReportFormat = "console" | "json" | "html";
 
 export interface RunScanOptions {
   failOnSeverity?: Severity;
@@ -36,6 +37,7 @@ export interface RunScanResult {
 
 export interface ScanRunnerOptions {
   consoleReporter?: ConsoleReporter;
+  htmlReporter?: HtmlReporter;
   jsonReporter?: JsonReporter;
   logger?: Logger;
   rules?: Rule[];
@@ -96,6 +98,7 @@ const evaluateRules = async (
 
 export class ScanRunner {
   private readonly consoleReporter: ConsoleReporter;
+  private readonly htmlReporter: HtmlReporter;
   private readonly jsonReporter: JsonReporter;
   private readonly logger: Logger;
   private readonly rules: Rule[];
@@ -103,6 +106,7 @@ export class ScanRunner {
 
   constructor(options: ScanRunnerOptions = {}) {
     this.consoleReporter = options.consoleReporter ?? new ConsoleReporter();
+    this.htmlReporter = options.htmlReporter ?? new HtmlReporter();
     this.jsonReporter = options.jsonReporter ?? new JsonReporter();
     this.logger = options.logger ?? createLogger();
     this.rules = options.rules ?? defaultRules();
@@ -128,11 +132,16 @@ export class ScanRunner {
       this.consoleReporter.render(report);
     } else {
       if (options.outputPath === undefined) {
-        throw new Error("JSON output requires --output <path>.");
+        throw new Error(`${options.format.toUpperCase()} output requires --output <path>.`);
       }
 
-      await this.jsonReporter.write(report, options.outputPath);
-      this.logger.info("JSON report written", {
+      if (options.format === "json") {
+        await this.jsonReporter.write(report, options.outputPath);
+      } else {
+        await this.htmlReporter.write(report, options.outputPath);
+      }
+
+      this.logger.info(`${options.format.toUpperCase()} report written`, {
         outputPath: options.outputPath
       });
     }

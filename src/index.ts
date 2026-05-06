@@ -17,6 +17,7 @@ export type {
   ProbeResult,
   ScanInput,
   ScanReport,
+  ScanReportMetadata,
   ScanSummary,
   SingleEndpointScanInput,
   ConfigFileScanInput,
@@ -43,12 +44,17 @@ export {
   createConsoleReporter,
   type ConsoleReporterTarget
 } from "./reporters/console.reporter.js";
+export { HtmlReporter, createHtmlReporter } from "./reporters/html.reporter.js";
 export { JsonReporter, createJsonReporter } from "./reporters/json.reporter.js";
 export {
+  REPORT_VERSION,
+  TOOL_NAME,
   createEmptySeverityCounts,
   createScanReport,
+  createScanReportMetadata,
   createScanSummary
 } from "./reporters/helpers.js";
+export type { Reporter } from "./reporters/reporter.js";
 export { ContentTypeRule } from "./rules/content-type.rule.js";
 export { CorsRule } from "./rules/cors.rule.js";
 export { DangerousMethodsRule } from "./rules/dangerous-methods.rule.js";

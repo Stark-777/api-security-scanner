@@ -1,15 +1,16 @@
 # API Security Scanner
 
-API Security Scanner is a TypeScript-based toolkit for checking APIs for common security misconfigurations. It includes configuration loading, a reusable HTTP client, a basic scanner engine, a first set of security rules, and console/JSON reporting helpers.
+API Security Scanner is a TypeScript-based toolkit for checking APIs for common security misconfigurations. It includes configuration loading, a reusable HTTP client, a scanner engine, built-in security rules, and console/JSON/HTML reporting helpers.
 
 ## Overview
 
 This project is designed for developers, QA engineers, and AppSec teams who want a lightweight starting point for automated API security checks. The current implementation focuses on:
 
 - loading endpoint definitions from JSON config
+- loading endpoint definitions from OpenAPI 3.x specs
 - sending requests with a reusable HTTP client
-- evaluating a first set of rules against request/response data
-- generating console-friendly and JSON report output
+- evaluating built-in rules against request/response data
+- generating console-friendly, JSON, and HTML report output
 
 The project is intended for authorized testing only.
 
@@ -26,9 +27,15 @@ The project is intended for authorized testing only.
   - Missing authentication
   - CORS misconfiguration
   - Missing security headers
+  - Dangerous HTTP methods
+  - Sensitive data exposure
+  - Verbose error leakage
+  - Missing rate-limit indicators
+  - Content-Type validation issues
 - Report helpers for:
   - console output
   - JSON output
+  - HTML output
 
 ## Installation
 
@@ -61,6 +68,7 @@ npm run scan -- --config examples/configs/quickstart.config.json
 npm run scan -- --url https://httpbin.org/get --method GET
 npm run scan -- --openapi examples/openapi/example-openapi.yaml
 npm run scan -- --config examples/configs/quickstart.config.json --format json --output examples/reports/scan-report.json
+npm run scan -- --openapi examples/openapi/example-openapi.yaml --format html --output examples/reports/scan-report.html
 ```
 
 ### Config format
@@ -122,6 +130,12 @@ Run it with:
 
 ```bash
 npm run scan -- --openapi examples/openapi/example-openapi.yaml
+```
+
+### Example HTML report artifact
+
+```bash
+npm run scan -- --config examples/configs/quickstart.config.json --format html --output examples/reports/scan-report.html
 ```
 
 ### Example config
@@ -187,6 +201,7 @@ import {
   SecurityHeadersRule,
   createConsoleReporter,
   createJsonReporter,
+  createHtmlReporter,
   createScanReport
 } from "api-security-scanner";
 
@@ -210,14 +225,17 @@ const report = createScanReport(findings, probeResults.length);
 
 createConsoleReporter().render(report);
 await createJsonReporter().write(report, "examples/reports/scan-report.json");
+await createHtmlReporter().write(report, "examples/reports/scan-report.html");
 ```
 
 ### Example console output shape
 
 ```text
 Scan Summary
+Tool: api-security-scanner
 Endpoints scanned: 2
 Total findings: 2
+Findings by severity:
 critical: 0
 high: 1
 medium: 1
@@ -233,16 +251,16 @@ Implemented so far:
 - core types and scanner model
 - config loader with env support
 - reusable HTTP client
-- initial security rules
-- console and JSON reporting
+- expanded security rules
+- console, JSON, and HTML reporting
 - full CLI scan workflow
 - OpenAPI JSON/YAML input
 - Vitest unit tests
 
 Not implemented yet:
 
-- HTML reporting
-- broader rule coverage
+- CI and release workflow
+- hardening and product-readiness work
 
 ## Security Note
 

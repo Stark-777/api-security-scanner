@@ -39,7 +39,14 @@ export interface ScanSummary {
   totalFindings: number;
 }
 
+export interface ScanReportMetadata {
+  generatedAt: string;
+  reportVersion: string;
+  toolName: string;
+}
+
 export interface ScanReport {
+  metadata: ScanReportMetadata;
   summary: ScanSummary;
   findings: Finding[];
 }

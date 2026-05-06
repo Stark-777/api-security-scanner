@@ -155,4 +155,62 @@ paths:
     expect(log).toHaveBeenCalledWith(`JSON report written to ${outputPath}`);
     expect(error).not.toHaveBeenCalled();
   });
+
+  it("writes an HTML report from config input", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "cli-html-"));
+    const configPath = join(tempDirectory, "config.json");
+    const outputPath = join(tempDirectory, "report.html");
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        endpoints: [
+          {
+            url: "https://api.example.com/users",
+            method: "GET"
+          }
+        ]
+      })
+    );
+
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const logger = createLogger();
+    const runner = new ScanRunner({
+      logger,
+      scannerFactory: (scannerOptions) =>
+        new Scanner({
+          logger: scannerOptions?.logger,
+          httpClient: new HttpClient({
+            axiosInstance,
+            logger: scannerOptions?.logger,
+            baseUrl: scannerOptions?.httpClientOptions?.baseUrl,
+            defaultHeaders: scannerOptions?.httpClientOptions?.defaultHeaders,
+            timeoutMs: scannerOptions?.httpClientOptions?.timeoutMs
+          })
+        })
+    });
+    const log = vi.fn();
+    const error = vi.fn();
+    const program = createCli({
+      runner,
+      io: { log, error }
+    });
+
+    await program.parseAsync(
+      ["scan", "--config", configPath, "--format", "html", "--output", outputPath],
+      { from: "user" }
+    );
+
+    const report = await readFile(outputPath, "utf8");
+
+    expect(report).toContain("<!DOCTYPE html>");
+    expect(report).toContain("API Security Scan Report");
+    expect(log).toHaveBeenCalledWith(`HTML report written to ${outputPath}`);
+    expect(error).not.toHaveBeenCalled();
+  });
 });

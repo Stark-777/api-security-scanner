@@ -10,6 +10,7 @@ import { Scanner } from "../../src/core/scanner.js";
 import { Severity } from "../../src/core/severity.js";
 import { HttpClient } from "../../src/http/client.js";
 import { ConsoleReporter } from "../../src/reporters/console.reporter.js";
+import { HtmlReporter } from "../../src/reporters/html.reporter.js";
 import { JsonReporter } from "../../src/reporters/json.reporter.js";
 import type { Logger } from "../../src/utils/logger.js";
 
@@ -74,6 +75,7 @@ describe("scan runner", () => {
     expect(result.report.summary.endpointsScanned).toBe(1);
     expect(result.findings.length).toBeGreaterThan(0);
     expect(reporterTarget.log).toHaveBeenCalledWith("Scan Summary");
+    expect(result.report.metadata.toolName).toBe("api-security-scanner");
   });
 
   it("writes a JSON report when requested", async () => {
@@ -101,6 +103,38 @@ describe("scan runner", () => {
         }
       },
       format: "json",
+      outputPath
+    });
+
+    expect(reporterWrite).toHaveBeenCalled();
+    reporterWrite.mockRestore();
+  });
+
+  it("writes an HTML report when requested", async () => {
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scan-runner-html-"));
+    const outputPath = join(tempDirectory, "report.html");
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: null
+    });
+    const axiosInstance = { request } as unknown as AxiosInstance;
+    const reporterWrite = vi.spyOn(HtmlReporter.prototype, "write");
+    const runner = new ScanRunner({
+      logger: createLogger(),
+      htmlReporter: new HtmlReporter(),
+      scannerFactory: createScannerFactory(axiosInstance)
+    });
+
+    await runner.run({
+      input: {
+        type: "single-endpoint",
+        value: {
+          url: "https://api.example.com/health",
+          method: "GET"
+        }
+      },
+      format: "html",
       outputPath
     });
 

@@ -8,6 +8,7 @@ import type { Finding } from "../../src/core/finding.js";
 import { Severity } from "../../src/core/severity.js";
 import { ConsoleReporter } from "../../src/reporters/console.reporter.js";
 import { createScanReport } from "../../src/reporters/helpers.js";
+import { HtmlReporter } from "../../src/reporters/html.reporter.js";
 import { JsonReporter } from "../../src/reporters/json.reporter.js";
 
 const sampleFindings: Finding[] = [
@@ -41,6 +42,9 @@ describe("reporter helpers", () => {
   it("builds summary counts from findings", () => {
     const report = createScanReport(sampleFindings, 3);
 
+    expect(report.metadata.toolName).toBe("api-security-scanner");
+    expect(report.metadata.reportVersion).toBe("1.0");
+    expect(report.metadata.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(report.summary).toEqual({
       endpointsScanned: 3,
       findingsBySeverity: {
@@ -63,6 +67,8 @@ describe("ConsoleReporter", () => {
     reporter.render(createScanReport(sampleFindings, 2));
 
     expect(log).toHaveBeenCalledWith("Scan Summary");
+    expect(log).toHaveBeenCalledWith("Tool: api-security-scanner");
+    expect(log).toHaveBeenCalledWith("Findings by severity:");
     expect(log).toHaveBeenCalledWith("Endpoints scanned: 2");
     expect(log).toHaveBeenCalledWith("Total findings: 2");
     expect(log).toHaveBeenCalledWith("Findings - HIGH");
@@ -87,6 +93,10 @@ describe("JsonReporter", () => {
     const result = reporter.generate(createScanReport(sampleFindings, 2));
 
     expect(JSON.parse(result)).toMatchObject({
+      metadata: {
+        toolName: "api-security-scanner",
+        reportVersion: "1.0"
+      },
       summary: {
         endpointsScanned: 2,
         totalFindings: 2
@@ -105,11 +115,41 @@ describe("JsonReporter", () => {
     const fileContents = await readFile(filePath, "utf8");
 
     expect(JSON.parse(fileContents)).toMatchObject({
+      metadata: {
+        toolName: "api-security-scanner",
+        reportVersion: "1.0"
+      },
       summary: {
         endpointsScanned: 2,
         totalFindings: 2
       },
       findings: sampleFindings
     });
+  });
+});
+
+describe("HtmlReporter", () => {
+  it("generates a self-contained HTML report", () => {
+    const reporter = new HtmlReporter();
+    const result = reporter.generate(createScanReport(sampleFindings, 2));
+
+    expect(result).toContain("<!DOCTYPE html>");
+    expect(result).toContain("API Security Scan Report");
+    expect(result).toContain("<h2>HIGH</h2>");
+    expect(result).toContain("api-security-scanner");
+    expect(result).toContain("https-enforced");
+  });
+
+  it("writes the HTML report to disk", async () => {
+    const reporter = new HtmlReporter();
+    const tempDirectory = await mkdtemp(join(tmpdir(), "scanner-html-report-"));
+    const filePath = join(tempDirectory, "reports", "scan-report.html");
+
+    await reporter.write(createScanReport(sampleFindings, 2), filePath);
+
+    const fileContents = await readFile(filePath, "utf8");
+
+    expect(fileContents).toContain("<html lang=\"en\">");
+    expect(fileContents).toContain("Response is missing recommended security headers");
   });
 });

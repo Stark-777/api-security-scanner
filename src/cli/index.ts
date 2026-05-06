@@ -24,7 +24,7 @@ export interface CreateCliOptions {
 interface ScanCommandOptions {
   config?: string;
   failOn?: Severity;
-  format?: "console" | "json";
+  format?: "console" | "json" | "html";
   method?: HttpMethod;
   openapi?: string;
   output?: string;
@@ -83,12 +83,15 @@ const resolveInput = (options: ScanCommandOptions): ScanInput => {
 };
 
 const validateOutputOptions = (options: ScanCommandOptions): void => {
-  if (options.format === "json" && options.output === undefined) {
-    throw new Error("JSON output requires --output <path>.");
+  if (
+    (options.format === "json" || options.format === "html") &&
+    options.output === undefined
+  ) {
+    throw new Error(`${options.format.toUpperCase()} output requires --output <path>.`);
   }
 
-  if (options.format !== "json" && options.output !== undefined) {
-    throw new Error("--output can only be used with --format json.");
+  if (options.format === "console" && options.output !== undefined) {
+    throw new Error("--output can only be used with --format json or --format html.");
   }
 };
 
@@ -115,10 +118,10 @@ export const createCli = (options: CreateCliOptions = {}): Command => {
     )
     .addOption(
       new Option("--format <format>", "Report format")
-        .choices(["console", "json"])
+        .choices(["console", "json", "html"])
         .default("console")
     )
-    .option("--output <path>", "Output file path for JSON reports")
+    .option("--output <path>", "Output file path for JSON or HTML reports")
     .addOption(
       new Option("--fail-on <severity>", "Fail when findings meet or exceed this severity").choices(
         severityChoices
@@ -137,8 +140,13 @@ export const createCli = (options: CreateCliOptions = {}): Command => {
 
         const result = await runner.run(runOptions);
 
-        if (runOptions.format === "json" && commandOptions.output !== undefined) {
-          io.log(`JSON report written to ${commandOptions.output}`);
+        if (
+          (runOptions.format === "json" || runOptions.format === "html") &&
+          commandOptions.output !== undefined
+        ) {
+          io.log(
+            `${runOptions.format.toUpperCase()} report written to ${commandOptions.output}`
+          );
         }
 
         if (result.shouldFail) {
