@@ -11,7 +11,7 @@ describe("ci and release assets", () => {
     expect(workflow).toContain("uses: actions/setup-node@v4");
     expect(workflow).toContain("run: npm ci");
     expect(workflow).toContain("run: npm run ci:check");
-    expect(workflow).toContain("--fail-on high");
+    expect(workflow).toContain("run: npm run ci:smoke");
   });
 
   it("defines a runnable Docker image", async () => {
@@ -30,6 +30,9 @@ describe("ci and release assets", () => {
 
     expect(packageJson.scripts["ci:check"]).toBe(
       "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration && npm run build"
+    );
+    expect(packageJson.scripts["ci:smoke"]).toBe(
+      "node scripts/ci-smoke-scan.mjs"
     );
     expect(packageJson.scripts["docker:build"]).toBe(
       "docker build -t api-security-scanner ."

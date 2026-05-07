@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "ci:check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration && npm run build",
+    "ci:smoke": "node scripts/ci-smoke-scan.mjs",
     "dev": "npm run build && node dist/cli/index.js",
     "docker:build": "docker build -t api-security-scanner .",
     "lint": "eslint .",

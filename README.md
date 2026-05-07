@@ -204,7 +204,13 @@ npm run test:unit
 npm run test:integration
 ```
 
-The GitHub Actions workflow runs dependency install, lint, typecheck, unit tests, integration tests, build, and a CI-style scan example.
+The GitHub Actions workflow runs dependency install, lint, typecheck, unit tests, integration tests, build, and a deterministic localhost smoke scan for `--fail-on` behavior.
+
+Run the CI smoke scan after `npm run build`:
+
+```bash
+npm run ci:smoke
+```
 
 Build the Docker image:
 

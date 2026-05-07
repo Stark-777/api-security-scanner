@@ -27,5 +27,4 @@ jobs:
         run: npm run ci:check
 
       - name: Verify fail-on severity behavior
-        run: |
-          npm run scan -- --config examples/configs/quickstart.config.json --fail-on high
+        run: npm run ci:smoke
